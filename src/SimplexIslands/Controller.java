@@ -71,8 +71,8 @@ public class Controller {
     private float[][] map;
 
     // Default Settings
-    private int mapRows = 200;
-    private int mapColumns = 200;
+    private int mapRows = 128;
+    private int mapColumns = 128;
     private int octaves = 4;
     private float roughness = 0.66f;
     private float scale = 0.012f;
