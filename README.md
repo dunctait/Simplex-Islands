@@ -27,4 +27,4 @@ Edge Fade Coverage: This option fades out the values to 0 at the edges of the ma
 
 Radial Gradient Mask: This enables or disables a linear radial gradient mask that helps make the island more circular. Potential TODO is to alter this to take a variable that controls the drop off of the mask (i.e change it from being linear).
 
-Seed: I implemented a seed function where when the Simplex function creates the noise by looking at the hardcoded array the seed value is added to each value then modded by 255. This essentially gives 255 different maps (per collection of settings).
+Seed: I implemented a seed function where when the Simplex function creates the noise by looking at the hardcoded array the seed value is added to each value then modded by 255. This essentially gives 256 different maps (per collection of settings).
