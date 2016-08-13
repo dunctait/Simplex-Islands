@@ -1,7 +1,7 @@
 package SimplexIslands;
 
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
+import javafx.application.Platform;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
@@ -9,18 +9,22 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
+import java.awt.*;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
 import java.math.BigDecimal;
 
 public class Controller {
 
-    Scene scene;
-    Stage stage;
+    private Scene scene;
+    private Stage stage;
 
     @FXML GridPane gridPane;
     @FXML HBox hbox;
@@ -65,25 +69,29 @@ public class Controller {
 
     private GraphicsContext gc;
 
+
     private int canvasW;
     private int canvasH;
 
     private float[][] map;
 
     // Default Settings
-    private int mapRows = 128;
-    private int mapColumns = 128;
-    private int octaves = 4;
-    private float roughness = 0.66f;
-    private float scale = 0.012f;
+    private int mapRows;
+    private int mapColumns;
+    private int octaves;
+    private float roughness;
+    private float scale;
 
-    private float colour1Limit = 0.21f;
-    private float colour2Limit = 0.27f;
-    private float colour3Limit = 0.6f;
+    private float colour1Limit;
+    private float colour2Limit;
+    private float colour3Limit;
 
-    private float edgeFade = 0.08f;
-    private boolean radialEnabled = true;
-    private short seed = 0;
+    private float edgeFade;
+    private boolean radialEnabled;
+    private short seed;
+
+    private int startX;
+    private int startY;
 
     @FXML
     public void initialize() {
@@ -91,6 +99,36 @@ public class Controller {
         gc = mapCanvas.getGraphicsContext2D();
         canvasW = (int)mapCanvas.getWidth();
         canvasH = (int)mapCanvas.getHeight();
+
+        setDefaults();
+        updateGui();
+        createListeners();
+
+        CreateArray();
+        DrawMapCanvas();
+    }
+
+    private void setDefaults() {
+
+        mapRows = 128;
+        mapColumns = 128;
+        octaves = 4;
+        roughness = 0.66f;
+        scale = 0.012f;
+
+        colour1Limit = 0.21f;
+        colour2Limit = 0.27f;
+        colour3Limit = 0.6f;
+
+        edgeFade = 0.08f;
+        radialEnabled = true;
+        seed = 0;
+
+        startX = mapColumns/2;
+        startY = mapRows/2;
+    }
+
+    private void updateGui() {
 
         columnsSlider.setValue(mapColumns);
         rowsSlider.setValue(mapRows);
@@ -103,7 +141,7 @@ public class Controller {
         colour2Slider.setValue(colour2Limit);
         colour3Slider.setValue(colour3Limit);
         radialCheckbox.setSelected(radialEnabled);
-        
+
         columnsLabel.setText("Columns: " + (int) columnsSlider.getValue());
         rowsLabel.setText("Rows: " + (int) rowsSlider.getValue());
         octavesLabel.setText("Octaves: " + (int) octavesSlider.getValue());
@@ -113,13 +151,17 @@ public class Controller {
         seedLabel.setText("Seed: " + (int) seedSlider.getValue());
         SetColourLabels();
 
+    }
+
+    private void createListeners() {
+
         columnsSlider.valueProperty().addListener((observable, oldValue, newValue) -> {
             columnsLabel.setText("Columns: " + (int) columnsSlider.getValue());
             mapColumns = (int) columnsSlider.getValue();
             CreateArray();
             DrawMapCanvas();
         });
-        
+
         rowsSlider.valueProperty().addListener((observable, oldValue, newValue) -> {
             rowsLabel.setText("Rows: " + (int) rowsSlider.getValue());
             mapRows = (int) rowsSlider.getValue();
@@ -133,7 +175,7 @@ public class Controller {
             CreateArray();
             DrawMapCanvas();
         });
-        
+
         roughnessSlider.valueProperty().addListener((observable, oldValue, newValue) -> {
             float value = round( (float)roughnessSlider.getValue(), 2);
             roughnessLabel.setText("Roughness: " + value);
@@ -184,18 +226,12 @@ public class Controller {
             DrawMapCanvas();
         });
 
-        radialCheckbox.selectedProperty().addListener(new ChangeListener<Boolean>() {
-            public void changed(ObservableValue<? extends Boolean> ov,
-                                Boolean oldValue, Boolean newValue) {
-                if (radialEnabled == newValue) { return; }
-                radialEnabled = newValue;
-                CreateArray();
-                DrawMapCanvas();
-            }
+        radialCheckbox.selectedProperty().addListener((observable, oldValue, newValue) -> {
+            if (radialEnabled == newValue) { return; }
+            radialEnabled = newValue;
+            CreateArray();
+            DrawMapCanvas();
         });
-        
-        CreateArray();
-        DrawMapCanvas();
     }
 
     private void CreateArray() {
@@ -238,6 +274,9 @@ public class Controller {
 
         gc.clearRect(0, 0, canvasW, canvasH);
 
+        float pixelW = (float)canvasW/mapColumns;
+        float pixelH = (float)canvasH/mapRows;
+
         for (int i=0; i<mapColumns; i++) {
             for (int j = 0; j < mapRows; j++) {
 
@@ -246,15 +285,22 @@ public class Controller {
                 else if (map[i][j] < colour3Limit) gc.setFill(Color.GREEN);
                 else gc.setFill(Color.LIGHTGREY);
 
-                float pixelW = (float)canvasW/mapColumns;
-                float pixelH = (float)canvasH/mapRows;
-
-                // fillRect( x, y, w, h );
                 gc.fillRect( roundDown(i * pixelW, 0), roundDown(j * pixelH, 0), roundUp(pixelW,0), roundUp(pixelH,0) );
                 // round down the positions and round up the pixel size to ensure overlap and no spaces between pixels
 
             }
         }
+
+        if ( map[startX][startY] < colour1Limit) { // if start position is in water due to map changing
+            // reset to default
+            startX = mapColumns/2;
+            startY = mapRows/2;
+        }
+
+        // draw start position
+        gc.setFill(Color.RED);
+        gc.fillRect( roundDown(startX * pixelW, 0), roundDown(startY * pixelH, 0), roundUp(pixelW,0), roundUp(pixelH,0) );
+
     }
 
     private void normalizeArray() {
@@ -367,20 +413,62 @@ public class Controller {
         return bd.floatValue();
     }
 
-    public void setStage(Stage localStage) {
+    void setStage(Stage localStage) {
 
         stage = localStage;
         scene = stage.getScene();
 
-        scene.widthProperty().addListener(new ChangeListener<Number>() {
-            @Override public void changed(ObservableValue<? extends Number> observableValue, Number oldSceneWidth, Number newSceneWidth) {
-                ResizeCanvas();
-            }
-        });
-        scene.heightProperty().addListener(new ChangeListener<Number>() {
-            @Override public void changed(ObservableValue<? extends Number> observableValue, Number oldSceneHeight, Number newSceneHeight) {
-                ResizeCanvas();
-            }
-        });
+        scene.widthProperty().addListener((observableValue, oldSceneWidth, newSceneWidth) -> ResizeCanvas());
+        scene.heightProperty().addListener((observableValue, oldSceneHeight, newSceneHeight) -> ResizeCanvas());
     }
+
+    @FXML
+    private void close(ActionEvent event) {
+        stage.setOnCloseRequest(e -> Platform.exit());
+        stage.close();
+    }
+
+    @FXML
+    private void setDefaultsClicked(ActionEvent event) {
+        setDefaults();
+        updateGui();
+    }
+
+    @FXML private void exportToClipboard(ActionEvent event) {
+        // example string:
+        // levels[0] = new LevelSettings(128, 128, 4, 0.66f, 0.012f, 0.21f, 0.27f, 0.6f, 0.08f, true, (short)0, 64, 64);
+        // levels[0] = new LevelSettings(int width, int height, int octaves, float roughness, float scale,
+        //                                float range1, float range2, float range3, float edgeFade,
+        //                                boolean radialMask, short seed, int startX, int startY) {
+        String output = "levels[0] = new LevelSettings(";
+        output += mapColumns + ", " + mapRows + ", " + octaves + ", " + roughness + "f, ";
+        output += scale + "f, " + colour1Limit + "f, " + colour2Limit + "f, " + colour3Limit + "f, ";
+        output += edgeFade + "f, " + radialEnabled + ", (short)" + seed + ", " + startX + ", " + startY + ");";
+
+        StringSelection outputSelection = new StringSelection(output);
+        Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+        clipboard.setContents(outputSelection, outputSelection);
+
+        Toast t = new Toast();
+        t.makeText(stage, "Copied to clipboard", 500, 100, 500);
+
+    }
+
+    @FXML public void drawClicked(MouseEvent event)
+    {
+
+        float pixelW = (float)canvasW/mapColumns;
+        float pixelH = (float)canvasH/mapRows;
+
+        int tempStartX = (int)(event.getX() / pixelW);
+        int tempStartY = (int)(event.getY() / pixelH);
+
+        if ( map[tempStartX][tempStartY] > colour1Limit) {
+            startX = tempStartX;
+            startY = tempStartY;
+            DrawMapCanvas();
+        }
+
+    }
+
 }
