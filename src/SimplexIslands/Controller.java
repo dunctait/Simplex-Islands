@@ -242,6 +242,20 @@ public class Controller {
         normalizeArray();
         if (radialEnabled) createRadialMask();
         createEdgeMask();
+        flipVertically();
+    }
+
+    private void flipVertically() {
+
+        float[][] tempMap = new float[mapColumns][mapRows];
+
+        for (int x = 0; x<mapColumns; x++) {
+            for (int y = 0; y<mapRows; y++) {
+                tempMap[x][y] = map[x][mapRows-y-1];
+            }
+        }
+
+        map = tempMap;
     }
 
     private void SetColourLabels() {
@@ -299,7 +313,7 @@ public class Controller {
 
         // draw start position
         gc.setFill(Color.RED);
-        gc.fillRect( roundDown(startX * pixelW, 0), roundDown(startY * pixelH, 0), roundUp(pixelW,0), roundUp(pixelH,0) );
+        gc.fillRect( roundDown(startX * pixelW, 0), roundDown((mapRows - startY) * pixelH, 0), roundUp(pixelW,0), roundUp(pixelH,0) );
 
     }
 
@@ -461,7 +475,7 @@ public class Controller {
         float pixelH = (float)canvasH/mapRows;
 
         int tempStartX = (int)(event.getX() / pixelW);
-        int tempStartY = (int)(event.getY() / pixelH);
+        int tempStartY = mapRows - (int)(event.getY() / pixelH);
 
         if ( map[tempStartX][tempStartY] > colour1Limit) {
             startX = tempStartX;

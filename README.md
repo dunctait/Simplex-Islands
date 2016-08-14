@@ -9,7 +9,7 @@ Access the .jar [here](https://raw.githubusercontent.com/dunctait/Simplex-Island
 
 This small program was originally written to give a better understanding of how the various settings affect the output from the Simplex Noise function. See [here](http://staffwww.itn.liu.se/~stegu/simplexnoise/simplexnoise.pdf) for the origin of the Simplex code.
 
-I am now using the program to create random potential levels for a project I am working on so it is now leaning toward being designed for my specific use case.
+I am now using the program to create random potential levels for a project I am working on so it is now leaning toward being designed for my specific use case. For example, clicking on the map changes the start location of the character in my project and Export > Copy String to Clipboard is a shortcut for when I'm designing levels for the game.
 
 # Settings
 
